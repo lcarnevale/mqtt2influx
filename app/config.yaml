@@ -1,0 +1,8 @@
+mqtt:
+  host: broker.mqttdashboard.com
+  port: 1883
+  topics:
+    - /your/topic/
+influx:
+  host:
+  port:
