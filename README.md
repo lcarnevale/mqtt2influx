@@ -1,4 +1,6 @@
 # MQTT to Influx Microservice
+<img src="https://img.shields.io/badge/python-v3-blue" alt="python-v3-blue">
+<img src="https://img.shields.io/badge/influxdb-v2.0.3-blue" alt="influxdb-v2.0.3">
 
 A Python implementation of a MQTT to Influx proxy microservice,  intended as support to Internet of Things (IoT) applications. It uses the reader-writer paradigm for consuming messages.
 
