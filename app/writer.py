@@ -14,7 +14,6 @@ __credits__ = ''
 __description__ = 'Reader class based on MQTT'
 
 
-import os
 import json
 import socket
 import logging
@@ -36,14 +35,12 @@ class Writer:
 
     def __setup_logging(self, verbosity):
         format = "%(asctime)s %(filename)s:%(lineno)d %(levelname)s - %(message)s"
-        filename='/var/log/mqtt2influx/mqtt2influx.log'
+        filename='log/mqtt2influx.log'
         datefmt = "%d/%m/%Y %H:%M:%S"
         level = logging.INFO
-        if not os.path.exists('log'):
-            os.makedirs('log')
         if (verbosity):
             level = logging.DEBUG
-        logging.basicConfig(format=format, level=level, datefmt=datefmt)
+        logging.basicConfig(filename=filename, filemode='a', format=format, level=level, datefmt=datefmt)
 
 
     def setup(self):
@@ -125,12 +122,9 @@ class Writer:
     """
     def __on_message(self, client, _, msg):
         try:
-            logging.info(msg.payload)
             payload = json.loads(msg.payload)
             logging.debug('Received JSON data from %s' % (msg.topic))
-            self.__mutex.acquire()
             self.__queue.put(payload)
-            self.__mutex.release()
             logging.debug('JSON data insert into the queue')
         except ValueError:
             logging.error('Message received from %s is malformed. JSON required.' % (msg.topic))

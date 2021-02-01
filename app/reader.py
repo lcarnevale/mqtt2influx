@@ -14,7 +14,6 @@ __credits__ = ''
 __description__ = 'Writer class based on InfluxDB'
 
 
-import os
 import time
 import logging
 import threading
@@ -36,12 +35,12 @@ class Reader:
 
     def __setup_logging(self, verbosity):
         format = "%(asctime)s %(filename)s:%(lineno)d %(levelname)s - %(message)s"
-        filename='/var/log/mqtt2influx/mqtt2influx.log'
+        filename='log/mqtt2influx.log'
         datefmt = "%d/%m/%Y %H:%M:%S"
         level = logging.INFO
         if (verbosity):
             level = logging.DEBUG
-        logging.basicConfig(format=format, level=level, datefmt=datefmt)
+        logging.basicConfig(filename=filename, filemode='a', format=format, level=level, datefmt=datefmt)
 
 
     def setup(self):
@@ -60,9 +59,7 @@ class Reader:
         
         try:
             while (True):
-                self.__mutex.acquire()
                 raw_data = q.get()
-                self.__mutex.release()
                 logging.debug("Just got new data: %s" % raw_data)
 
                 logging.debug("Parsing data points")
@@ -82,8 +79,6 @@ class Reader:
         except KeyboardInterrupt:
             pass
         
-        del q
-
 
     def start(self):
         self.__reader.start()

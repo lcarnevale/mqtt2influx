@@ -14,6 +14,7 @@ __credits__ = ''
 __description__ = 'MQTT to InfluxDB Proxy'
 
 
+import os
 import yaml
 import argparse
 from writer import Writer
@@ -42,11 +43,15 @@ def main():
 
     options = parser.parse_args()
     verbosity = options.verbosity
+    logdir_name = 'log'
+    mutex = Lock()
 
     with open(options.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+    
+    if not os.path.exists(logdir_name):
+        os.makedirs(logdir_name)
 
-    mutex = Lock()
     writer = setup_writer(config['mqtt'], mutex, verbosity)
     reader = setup_reader(config['influx'], mutex, verbosity)
     writer.start()
