@@ -13,7 +13,6 @@ __author__ = 'Lorenzo Carnevale <lcarnevale@unime.it>'
 __credits__ = ''
 __description__ = 'MQTT to InfluxDB Proxy'
 
-import time
 import json
 import yaml
 import socket
@@ -22,9 +21,7 @@ import argparse
 import threading
 import persistqueue
 import paho.mqtt.client as mqtt
-from datetime import datetime
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
+from reader import Reader
 
 
 def writer_job(host, port, topics):
@@ -119,33 +116,6 @@ def writer_job(host, port, topics):
     finally:
         client.disconnect()
 
-def reader_job(host, port, token, organization, bucket):
-    q = persistqueue.SQLiteQueue('data', auto_commit=True)
-    url = "http://%s:%s" % (host, port)
-
-    client = InfluxDBClient(url=url, token=token)
-    write_api = client.write_api(write_options=SYNCHRONOUS)
-    
-    while (True):
-        raw_data = q.get()
-        logging.debug("Just got new data: %s" % raw_data)
-
-        logging.debug("Parsing data points")
-        data = [
-            {
-                "measurement": raw_data['measurement'],
-                "tags": raw_data['tags'], 
-                "fields": raw_data['fields'], 
-                "time": datetime.utcnow()
-            }
-        ]
-
-        write_api.write(bucket, organization, data)
-        logging.info("Data into InfluxDB")
-
-        time.sleep(0.3)
-    del q
-
 
 def main():
     description = ('%s\n%s' % (__author__, __description__))
@@ -181,11 +151,10 @@ def setup_writer(config):
     )
 
 def setup_reader(config):
-    return threading.Thread(
-        target = reader_job, 
-        args = (config['host'], config['port'], config['token'],
+    reader = Reader(config['host'], config['port'], config['token'],
             config['organization'], config['bucket'])
-    )
+    reader.setup()
+    return reader
 
 
 if __name__ == '__main__':
