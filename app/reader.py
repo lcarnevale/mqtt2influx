@@ -14,6 +14,7 @@ __credits__ = ''
 __description__ = 'Writer class based on InfluxDB'
 
 
+import os
 import time
 import logging
 import threading
@@ -24,18 +25,23 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 
 class Reader:
 
-    def __init__(self, host, port, token, organization, bucket):
+    def __init__(self, host, port, token, organization, bucket, mutex, verbosity):
         self.__url = "http://%s:%s" % (host, port)
         self.__token = token
         self.__organization = organization
         self.__bucket = bucket
+        self.__mutex = mutex
         self.__reader = None
-        self.__setup_logging()
+        self.__setup_logging(verbosity)
 
-    def __setup_logging(self):
-        format = "%(asctime)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+    def __setup_logging(self, verbosity):
+        format = "%(asctime)s %(filename)s:%(lineno)d %(levelname)s - %(message)s"
+        filename='/var/log/mqtt2influx/mqtt2influx.log'
         datefmt = "%d/%m/%Y %H:%M:%S"
-        logging.basicConfig(format=format, level=logging.DEBUG, datefmt=datefmt)
+        level = logging.INFO
+        if (verbosity):
+            level = logging.DEBUG
+        logging.basicConfig(format=format, level=level, datefmt=datefmt)
 
 
     def setup(self):
@@ -45,14 +51,18 @@ class Reader:
         )
     
     def __reader_job(self, url, token, organization, bucket):
-        q = persistqueue.SQLiteQueue('data', auto_commit=True)
+        self.__mutex.acquire()
+        q = persistqueue.SQLiteQueue('data', multithreading=True, auto_commit=True)
+        self.__mutex.release()
 
         client = InfluxDBClient(url=url, token=token)
         write_api = client.write_api(write_options=SYNCHRONOUS)
         
         try:
             while (True):
+                self.__mutex.acquire()
                 raw_data = q.get()
+                self.__mutex.release()
                 logging.debug("Just got new data: %s" % raw_data)
 
                 logging.debug("Parsing data points")

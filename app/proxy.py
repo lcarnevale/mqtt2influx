@@ -18,6 +18,7 @@ import yaml
 import argparse
 from writer import Writer
 from reader import Reader
+from threading import Lock
 
 
 def main():
@@ -34,24 +35,32 @@ def main():
                         type=str,
                         required=True)
 
+    parser.add_argument('-v', '--verbosity',
+                        dest='verbosity',
+                        help='Logging verbosity level',
+                        action="store_true")
+
     options = parser.parse_args()
+    verbosity = options.verbosity
 
     with open(options.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    writer = setup_writer(config['mqtt'])
-    reader = setup_reader(config['influx'])
+    mutex = Lock()
+    writer = setup_writer(config['mqtt'], mutex, verbosity)
+    reader = setup_reader(config['influx'], mutex, verbosity)
     writer.start()
     reader.start()
 
-def setup_writer(config):
-    writer = Writer(config['host'], config['port'], config['topics'])
+def setup_writer(config, mutex, verbosity):
+    writer = Writer(config['host'], config['port'],
+        config['topics'], mutex, verbosity)
     writer.setup()
     return writer
 
-def setup_reader(config):
+def setup_reader(config, mutex, verbosity):
     reader = Reader(config['host'], config['port'], config['token'],
-            config['organization'], config['bucket'])
+            config['organization'], config['bucket'], mutex, verbosity)
     reader.setup()
     return reader
 

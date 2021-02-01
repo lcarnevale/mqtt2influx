@@ -14,6 +14,7 @@ __credits__ = ''
 __description__ = 'Reader class based on MQTT'
 
 
+import os
 import json
 import socket
 import logging
@@ -24,18 +25,25 @@ import paho.mqtt.client as mqtt
 
 class Writer:
 
-    def __init__(self, host, port, topics):
+    def __init__(self, host, port, topics, mutex, verbosity):
         self.__host = host
         self.__port = port
         self.__topics = topics
+        self.__mutex = mutex
         self.__client_name = '%s-sub' % (socket.gethostname())
         self.__writer = None
-        self.__setup_logging()
+        self.__setup_logging(verbosity)
 
-    def __setup_logging(self):
+    def __setup_logging(self, verbosity):
         format = "%(asctime)s %(filename)s:%(lineno)d %(levelname)s - %(message)s"
+        filename='/var/log/mqtt2influx/mqtt2influx.log'
         datefmt = "%d/%m/%Y %H:%M:%S"
-        logging.basicConfig(format=format, level=logging.DEBUG, datefmt=datefmt)
+        level = logging.INFO
+        if not os.path.exists('log'):
+            os.makedirs('log')
+        if (verbosity):
+            level = logging.DEBUG
+        logging.basicConfig(format=format, level=level, datefmt=datefmt)
 
 
     def setup(self):
@@ -46,7 +54,9 @@ class Writer:
 
     def __writer_job(self, host, port, topics):
         # SQLite objects created in a thread can only be used in that same thread.
-        self.__queue = persistqueue.SQLiteQueue('data', auto_commit=True)
+        self.__mutex.acquire()
+        self.__queue = persistqueue.SQLiteQueue('data', multithreading=True, auto_commit=True)
+        self.__mutex.release()
 
         # defining the client and callbacks
         client = mqtt.Client(self.__client_name)
@@ -118,7 +128,9 @@ class Writer:
             logging.info(msg.payload)
             payload = json.loads(msg.payload)
             logging.debug('Received JSON data from %s' % (msg.topic))
+            self.__mutex.acquire()
             self.__queue.put(payload)
+            self.__mutex.release()
             logging.debug('JSON data insert into the queue')
         except ValueError:
             logging.error('Message received from %s is malformed. JSON required.' % (msg.topic))
