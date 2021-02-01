@@ -1,0 +1,14 @@
+mqtt:
+  host: MQTT-HOST
+  port: MQTT-PORT
+  topics:
+    - MQTT-TOPIC1
+    - MQTT-TOPIC2
+influx:
+  host: INFLUX-HOST
+  port: INFLUX-PORT
+  user: INFLUX-USERNAME
+  password: INFLUX-PASSWORD
+  dbname: INFLUX-DB-NAME
+  dbuser: INFLUX-DB-USERNAME
+  dbuser_password: INFLUX-DB-PASSWORD
