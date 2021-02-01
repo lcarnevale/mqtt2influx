@@ -4,8 +4,7 @@
 """MQTT to InfluxDB Proxy
 
 This implementation does its best to follow the Robert Martin's Clean code guidelines.
-
-.. _Google Python Style Guide
+The comments follows the Google Python Style Guide:
     https://github.com/google/styleguide/blob/gh-pages/pyguide.md
 """
 
@@ -23,9 +22,12 @@ import argparse
 import threading
 import persistqueue
 import paho.mqtt.client as mqtt
+from datetime import datetime
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 
-def subscriber_job(host, port, topics):
+def writer_job(host, port, topics):
     q = persistqueue.SQLiteQueue('data', auto_commit=True)
 
     # initializing metadata
@@ -117,12 +119,31 @@ def subscriber_job(host, port, topics):
     finally:
         client.disconnect()
 
-def publisher_job(host, port):
+def reader_job(host, port, token, organization, bucket):
     q = persistqueue.SQLiteQueue('data', auto_commit=True)
+    url = "http://%s:%s" % (host, port)
+
+    client = InfluxDBClient(url=url, token=token)
+    write_api = client.write_api(write_options=SYNCHRONOUS)
+    
     while (True):
-        data = q.get()
-        print("Just read %s" % data)
-        time.sleep(0.5)
+        raw_data = q.get()
+        logging.debug("Just got new data: %s" % raw_data)
+
+        logging.debug("Parsing data points")
+        data = [
+            {
+                "measurement": raw_data['measurement'],
+                "tags": raw_data['tags'], 
+                "fields": raw_data['fields'], 
+                "time": datetime.utcnow()
+            }
+        ]
+
+        write_api.write(bucket, organization, data)
+        logging.info("Data into InfluxDB")
+
+        time.sleep(0.3)
     del q
 
 
@@ -143,23 +164,29 @@ def main():
     options = parser.parse_args()
 
     format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO,
-                        datefmt="%H:%M:%S")
+    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
     with open(options.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    subscriber = threading.Thread(
-        target = subscriber_job, 
-        args = (config['mqtt']['host'],config['mqtt']['port'], config['mqtt']['topics'])
-    )
-    publisher = threading.Thread(
-        target = publisher_job, 
-        args = (config['influx']['host'],config['influx']['port'])
+    writer = setup_writer(config['mqtt'])
+    reader = setup_reader(config['influx'])
+    writer.start()
+    reader.start()
+
+def setup_writer(config):
+    return threading.Thread(
+        target = writer_job, 
+        args = (config['host'],config['port'], config['topics'])
     )
 
-    subscriber.start()
-    publisher.start()
+def setup_reader(config):
+    return threading.Thread(
+        target = reader_job, 
+        args = (config['host'], config['port'], config['token'],
+            config['organization'], config['bucket'])
+    )
+
 
 if __name__ == '__main__':
     main()
