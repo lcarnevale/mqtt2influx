@@ -60,7 +60,7 @@ class Reader:
         try:
             while (True):
                 raw_data = q.get()
-                logging.debug("Just got new data: %s" % raw_data)
+                logging.debug("Just got new data")
 
                 logging.debug("Parsing data points")
                 data = [
