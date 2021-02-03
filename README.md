@@ -9,15 +9,18 @@ Clone the repository and build it locally using the Dockerfile.
 docker build -t lcarnevale/mqtt2influx .
 ```
 
-Run the image.
+Run the image, defining your configuration directory (i.e. ```/opt/lcarnevale/mqtt2influx```).
 ```bash
-docker run -d --rm --name mqtt2influx \
+docker run -d --name mqtt2influx \
     -v /opt/lcarnevale/mqtt2influx:/etc/mqtt2influx \
     -v /var/log/lcarnevale:/opt/app/log \
     --net=host \
     lcarnevale/mqtt2influx
 ```
 
+Use also the option ```--restart unless-stopped ``` if you wanna make it able to start on boot.
+
+# How to debug it
 Open the log file for watching what is going on.
 ```bash
 tail -f /var/log/lcarnevale/mqtt2influx.log
