@@ -110,7 +110,6 @@ class Writer:
     """
     def __on_disconnect(self, client, _, rc):
         logging.info('Disconnection successful %s' % (rc))
-        del self.__queue
 
     """MQTT message received callback
 
