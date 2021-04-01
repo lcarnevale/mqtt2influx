@@ -20,7 +20,7 @@ docker run -d --name mqtt2influx \
 
 Use also the option ```--restart unless-stopped ``` if you wanna make it able to start on boot.
 
-# How to debug it
+## How to debug it
 Open the log file for watching what is going on.
 ```bash
 tail -f /var/log/lcarnevale/mqtt2influx.log
