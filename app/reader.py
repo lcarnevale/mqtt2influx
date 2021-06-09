@@ -68,7 +68,7 @@ class Reader:
                         "measurement": raw_data['measurement'],
                         "tags": raw_data['tags'], 
                         "fields": raw_data['fields'], 
-                        "time": datetime.utcnow()
+                        "time": raw_data['time']
                     }
                 ]
 
